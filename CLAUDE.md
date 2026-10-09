@@ -1,0 +1,58 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+@AGENTS.md
+
+## Commands
+
+```bash
+npm run dev            # dev server (Turbopack)
+npm run build          # production build — needs DATABASE_URL set
+npm run lint           # ESLint (flat config, next core-web-vitals + typescript)
+npm run typecheck      # tsc --noEmit
+
+npm run auth:generate  # Better Auth CLI writes its tables into src/db/schema/auth.ts
+npm run db:generate    # drizzle-kit: SQL migrations from schema → drizzle/
+npm run db:migrate     # apply migrations to Neon
+npm run db:push        # push schema directly (prototyping only)
+npm run db:studio      # Drizzle Studio
+npm run db:seed        # upsert the placeholder catalogue (src/db/seed-data.ts)
+```
+
+There is no test runner configured yet.
+
+Env: copy `.env.example` to `.env.local` (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`). `drizzle.config.ts` loads `.env.local` then `.env` via dotenv; the app reads them through Next.
+
+## Stack
+
+Next.js 16.4 App Router + React 19.3, TypeScript (strict, `@/*` → `src/*`), Tailwind CSS v4, Better Auth, Drizzle ORM, Neon serverless Postgres.
+
+## Architecture
+
+Request flow for auth:
+
+```
+authClient (src/lib/auth-client.ts, baseURL = NEXT_PUBLIC_APP_URL)
+  → /api/auth/* (src/app/api/auth/[...all]/route.ts, toNextJsHandler(auth))
+  → auth (src/lib/auth.ts, betterAuth + drizzleAdapter(db, schema, provider "pg"))
+  → db (src/db/index.ts, drizzle over neon-http)
+  → Neon Postgres
+```
+
+- **Server-only boundary**: `src/lib/env.ts`, `src/lib/auth.ts` and `src/db/index.ts` import `server-only`; client components must only use `src/lib/auth-client.ts`.
+- **Env access**: server code reads required vars via `env` from `src/lib/env.ts` (lazy getters that throw when missing), not `process.env` directly. `src/db/index.ts` reads `DATABASE_URL` at module load, which is why builds need it.
+- **Schema**: `src/db/schema/` (re-exported from `index.ts`) is shared by the db client, the Better Auth adapter, and drizzle-kit. Better Auth tables are generated into `schema/auth.ts` with `auth:generate` (re-export it from `index.ts`). No auth tables exist yet, so auth endpoints will fail until that's done.
+- **Better Auth plugins**: `nextCookies()` must remain the last entry in `plugins`. No sign-in methods (`emailAndPassword`, `socialProviders`) are enabled yet.
+- **Rendering model**: `next.config.ts` enables `cacheComponents` and `partialPrefetching`. Data fetching is dynamic by default; opt into caching with the `"use cache"` directive / `cacheLife` / `cacheTag`. Requires the Node.js runtime (no `runtime = 'edge'`). Read `node_modules/next/dist/docs/` before using caching or routing APIs.
+- **Tailwind v4** is wired through the `@tailwindcss/turbopack` loader rule in `next.config.ts` (no PostCSS config). Theme tokens live in `src/app/globals.css` under `@theme inline`.
+
+## Database conventions
+
+- **Migrations**: every schema change goes through `db:generate` + `db:migrate`, with the generated SQL in `drizzle/` committed. `db:push` is for throwaway prototyping only.
+- **Catalogue model**: `categories` 1→n `products` 1→n `stock`. Stock is one row per product and size, keyed by `(product_id, size)`; one-size items get a single `"One size"` row. Stock rows are not product variants: they have no SKU, price or colour of their own.
+- **Money** is stored as integer minor units (`price_cents`). The app's `Product.price` is whole units, converted only in `toProduct` in the queries module.
+- **Ordered sub-data** that nothing queries on its own (product images, detail bullets) lives in `jsonb` / `text[]` columns, not child tables.
+- **Reads**: server code reads the catalogue only through `src/db/queries/catalog.ts` (module-level `"use cache"`, `cacheTag("catalog")`, `cacheLife("hours")`), which returns the existing `Product` / `Category` shapes. `src/lib/products.ts` is imported by client components, so it must hold types and pure helpers only, never DB imports.
+- **Merchandising** such as curated home-page rails stays as slug lists in `src/lib/catalog.ts`, not in the database.
+- **Scripts outside Next** (`scripts/seed.ts`) build their own Drizzle client, because `src/db/index.ts` imports `server-only`. The seed upserts by slug and never deletes rows.
