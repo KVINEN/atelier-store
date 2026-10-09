@@ -16,6 +16,15 @@ export const auth = betterAuth({
     schema,
   }),
   emailAndPassword: { enabled: true },
+  user: {
+    additionalFields: {
+      // "user" | "admin". `input: false` keeps it out of sign-up and updateUser;
+      // it is only changed by `npm run admin:grant`. requireAdmin() relies on
+      // getSession reading it from the database, so don't enable
+      // session.cookieCache without revisiting that check.
+      role: { type: "string", required: false, defaultValue: "user", input: false },
+    },
+  },
   // nextCookies must be the last plugin in the array
   plugins: [nextCookies()],
 });

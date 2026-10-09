@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
+    "admin:grant": "tsx scripts/grant-admin.ts",
     "stripe:listen": "stripe listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired --forward-to localhost:3000/api/stripe/webhook",
     "auth:generate": "npx @better-auth/cli@latest generate --config src/lib/auth.ts --output src/db/schema/auth.ts"
   },
