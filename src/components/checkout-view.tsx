@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
-import { createCheckoutSession, type CheckoutSessionResult } from "@/app/checkout/actions";
+import { createCheckoutSession, type CheckoutSessionResult } from "@/app/(shop)/checkout/actions";
 import { OrderSummary } from "@/components/order-summary";
 import { formatPrice } from "@/lib/products";
 import { useBag, useShopReady } from "@/lib/shop-store";
