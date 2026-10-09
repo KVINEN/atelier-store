@@ -1,5 +1,6 @@
 // Site content for the storefront: navigation, campaigns and curated rails.
-// Categories and products live in the database.
+// Categories and products live in the database. `hero`, `NEW_ARRIVALS` and
+// `GIFT_EDIT` are defaults only: admins override them (see `@/lib/site-content`).
 // Photography from Unsplash (https://unsplash.com/license), served via next/image.
 
 import { unsplash, type ImageAsset } from "@/lib/images";
@@ -50,7 +51,7 @@ export const hero = {
   ],
 };
 
-// Curated product rails on the home page, in display order.
+// Default curated product rails, in display order.
 export const NEW_ARRIVALS = [
   "pink-chain-shoulder-bag",
   "polka-dot-midi-dress",

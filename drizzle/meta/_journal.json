@@ -29,6 +29,13 @@
       "when": 1791567895430,
       "tag": "0003_hot_silk_fever",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791568581993,
+      "tag": "0004_swift_earthquake",
+      "breakpoints": true
     }
   ]
 }

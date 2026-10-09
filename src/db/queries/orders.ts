@@ -8,11 +8,11 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, products, type OrderItem, type OrderShipping } from "@/db/schema";
 
-/** Current price and per-size stock for the given products. */
+/** Current price and per-size stock for the given products, if still on sale. */
 export async function getProductsForCheckout(slugs: string[]) {
   if (slugs.length === 0) return [];
   return db.query.products.findMany({
-    where: inArray(products.slug, slugs),
+    where: and(inArray(products.slug, slugs), eq(products.status, "active")),
     columns: { id: true, slug: true, name: true, priceCents: true, images: true },
     with: { stock: { columns: { size: true, quantity: true } } },
   });
@@ -40,7 +40,12 @@ export async function getOrderBySession(stripeSessionId: string) {
  */
 export async function markOrderPaid(
   stripeSessionId: string,
-  details: { email: string | null; shipping: OrderShipping | null; amountTotalCents: number },
+  details: {
+    email: string | null;
+    shipping: OrderShipping | null;
+    amountTotalCents: number;
+    paymentIntentId: string | null;
+  },
 ): Promise<boolean> {
   const result = await db.execute<{ id: string }>(sql`
     with paid as (
@@ -49,7 +54,8 @@ export async function markOrderPaid(
           paid_at = now(),
           email = coalesce(${details.email}, ${orders.email}),
           shipping = ${details.shipping ? JSON.stringify(details.shipping) : null}::jsonb,
-          amount_total_cents = ${details.amountTotalCents}
+          amount_total_cents = ${details.amountTotalCents},
+          stripe_payment_intent_id = ${details.paymentIntentId}
       where ${orders.stripeSessionId} = ${stripeSessionId} and ${orders.status} = 'pending'
       returning ${orders.id}, ${orders.items}
     ),
@@ -60,12 +66,17 @@ export async function markOrderPaid(
       from paid, jsonb_array_elements(paid.items) as item
       group by 1, 2
     ),
-    -- Data-modifying CTEs always run to completion, even when unreferenced.
     sold as (
       update stock
       set quantity = greatest(stock.quantity - lines.quantity, 0)
       from lines
       where stock.product_id = lines.product_id and stock.size = lines.size
+      returning stock.product_id, stock.size, lines.quantity as sold, stock.quantity as after
+    ),
+    -- Data-modifying CTEs always run to completion, even when unreferenced.
+    logged as (
+      insert into stock_movements (product_id, size, delta, quantity_after, reason, order_id)
+      select product_id, size, -sold, after, 'sale', (select id from paid) from sold
     )
     select id from paid
   `);
@@ -78,4 +89,15 @@ export async function closePendingOrder(stripeSessionId: string, status: "failed
     .update(orders)
     .set({ status })
     .where(and(eq(orders.stripeSessionId, stripeSessionId), eq(orders.status, "pending")));
+}
+
+/**
+ * Mirrors the charge's refunded total onto its order. Takes Stripe's absolute
+ * figure (not an increment), so replays and out-of-order events are harmless.
+ */
+export async function setOrderRefunded(paymentIntentId: string, refundedCents: number) {
+  await db
+    .update(orders)
+    .set({ refundedCents: sql`least(${refundedCents}, ${orders.amountTotalCents})` })
+    .where(eq(orders.stripePaymentIntentId, paymentIntentId));
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { ProductListing } from "@/components/product-listing";
 import { getProductsBySlugs } from "@/db/queries/catalog";
-import { GIFT_EDIT } from "@/lib/catalog";
+import { getRailSlugs } from "@/db/queries/content";
 
 export const metadata: Metadata = {
   title: "Gifts",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function GiftsPage() {
-  const products = await getProductsBySlugs(GIFT_EDIT);
+  const products = await getProductsBySlugs(await getRailSlugs("gift-edit"));
 
   return (
     <main className="flex-1">

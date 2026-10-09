@@ -1,7 +1,8 @@
 "use cache";
 
 // Catalogue reads for the storefront. Every export is cached and tagged
-// "catalog", so results are part of the prerendered static shell.
+// "catalog", so results are part of the prerendered static shell. Only
+// `active` products are ever returned; admin reads live in `./admin`.
 
 import "server-only";
 
@@ -40,6 +41,8 @@ function toProduct(row: ProductRow): Product {
   };
 }
 
+const isActive = eq(products.status, "active");
+
 function catalog() {
   cacheTag("catalog");
   cacheLife("hours");
@@ -66,7 +69,7 @@ export async function getCategoryWithProducts(
   const row = await db.query.categories.findFirst({
     where: eq(categories.slug, slug),
     with: {
-      products: { orderBy: [asc(products.id)], with: productWith },
+      products: { where: isActive, orderBy: [asc(products.id)], with: productWith },
     },
   });
   if (!row) return undefined;
@@ -80,7 +83,7 @@ export async function getCategoryWithProducts(
 export async function getProduct(slug: string): Promise<Product | undefined> {
   catalog();
   const row = await db.query.products.findFirst({
-    where: eq(products.slug, slug),
+    where: and(eq(products.slug, slug), isActive),
     with: productWith,
   });
   return row ? toProduct(row) : undefined;
@@ -88,7 +91,7 @@ export async function getProduct(slug: string): Promise<Product | undefined> {
 
 export async function getProductSlugs(): Promise<string[]> {
   catalog();
-  const rows = await db.select({ slug: products.slug }).from(products);
+  const rows = await db.select({ slug: products.slug }).from(products).where(isActive);
   return rows.map((row) => row.slug);
 }
 
@@ -97,7 +100,7 @@ export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
   catalog();
   if (slugs.length === 0) return [];
   const rows = await db.query.products.findMany({
-    where: inArray(products.slug, slugs),
+    where: and(inArray(products.slug, slugs), isActive),
     with: productWith,
   });
   const bySlug = new Map(rows.map((row) => [row.slug, toProduct(row)]));
@@ -110,7 +113,7 @@ export async function getProductsByGender(
 ): Promise<Product[]> {
   catalog();
   const rows = await db.query.products.findMany({
-    where: inArray(products.gender, [gender, "unisex"]),
+    where: and(inArray(products.gender, [gender, "unisex"]), isActive),
     orderBy: [asc(products.id)],
     with: productWith,
   });
@@ -128,6 +131,7 @@ export async function searchProducts(query: string, limit = 48): Promise<Product
   const rows = await db.query.products.findMany({
     // Every term must match at least one field.
     where: and(
+      isActive,
       ...terms.map((term) => {
         const pattern = `%${term.replace(/[\\%_]/g, "\\$&")}%`;
         return or(
@@ -149,6 +153,7 @@ export async function searchProducts(query: string, limit = 48): Promise<Product
 export async function getLatestProducts(limit = 24): Promise<Product[]> {
   catalog();
   const rows = await db.query.products.findMany({
+    where: isActive,
     orderBy: [desc(products.createdAt), desc(products.id)],
     limit,
     with: productWith,
@@ -168,7 +173,7 @@ export async function getRelatedProducts(
     .from(categories)
     .where(eq(categories.slug, categorySlug));
   const rows = await db.query.products.findMany({
-    where: ne(products.slug, slug),
+    where: and(ne(products.slug, slug), isActive),
     orderBy: [desc(sql`${products.categoryId} = (${categoryId})`), asc(products.id)],
     limit,
     with: productWith,

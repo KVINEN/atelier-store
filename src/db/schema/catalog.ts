@@ -17,6 +17,9 @@ import type { ImageAsset } from "@/lib/images";
 
 export const productBadge = pgEnum("product_badge", ["New", "Exclusive", "Limited"]);
 
+/** Only `active` products are shown or sold; drafts and archived pieces are admin-only. */
+export const productStatus = pgEnum("product_status", ["draft", "active", "archived"]);
+
 /** Unisex pieces appear in both the women's and men's listings. */
 export const productGender = pgEnum("product_gender", ["women", "men", "unisex"]);
 
@@ -48,6 +51,7 @@ export const products = pgTable(
     colorCount: integer("color_count").notNull().default(1),
     badge: productBadge(),
     gender: productGender().notNull().default("unisex"),
+    status: productStatus().notNull().default("active"),
     /** Ordered; the first image is the listing image. */
     images: jsonb().$type<ImageAsset[]>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -59,6 +63,7 @@ export const products = pgTable(
   (table) => [
     index("products_category_id_idx").on(table.categoryId),
     index("products_gender_idx").on(table.gender),
+    index("products_status_idx").on(table.status),
     check("products_price_cents_check", sql`${table.priceCents} >= 0`),
   ],
 );

@@ -14,7 +14,7 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
     "admin:grant": "tsx scripts/grant-admin.ts",
-    "stripe:listen": "stripe listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired --forward-to localhost:3000/api/stripe/webhook",
+    "stripe:listen": "stripe listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,charge.refunded,charge.refund.updated --forward-to localhost:3000/api/stripe/webhook",
     "auth:generate": "npx @better-auth/cli@latest generate --config src/lib/auth.ts --output src/db/schema/auth.ts"
   },
   "dependencies": {
@@ -27,7 +27,8 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
-    "stripe": "^23.0.0"
+    "stripe": "^23.0.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

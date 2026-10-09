@@ -22,3 +22,24 @@ export function unsplash(id: string, width = 1600, focus?: Focus) {
 
   return `https://images.unsplash.com/photo-${id}?${params}`;
 }
+
+// Must match `images.remotePatterns` in next.config.ts, or next/image refuses
+// to render the URL. Admin forms accept only these.
+const ALLOWED_IMAGE_HOSTS = [{ hostname: "images.unsplash.com", pathPrefix: "/photo-" }];
+
+export function isAllowedImageUrl(value: string) {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  return (
+    url.protocol === "https:" &&
+    ALLOWED_IMAGE_HOSTS.some(
+      (host) => url.hostname === host.hostname && url.pathname.startsWith(host.pathPrefix),
+    )
+  );
+}
+
+export const IMAGE_URL_HINT = "An https://images.unsplash.com/photo-… URL.";

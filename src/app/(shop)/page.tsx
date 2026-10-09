@@ -6,14 +6,8 @@ import { ProductCard } from "@/components/product-card";
 import { ProductRail } from "@/components/product-rail";
 import { SectionHeader } from "@/components/section-header";
 import { getCategories, getProductsBySlugs } from "@/db/queries/catalog";
-import {
-  campaign,
-  editorials,
-  GIFT_EDIT,
-  hero,
-  NEW_ARRIVALS,
-  services,
-} from "@/lib/catalog";
+import { getHero, getRailSlugs } from "@/db/queries/content";
+import { campaign, editorials, services } from "@/lib/catalog";
 
 export default function Home() {
   return (
@@ -29,13 +23,15 @@ export default function Home() {
   );
 }
 
-function Hero() {
+async function Hero() {
+  const hero = await getHero();
+
   return (
     <section aria-labelledby="hero-title" className="relative">
       <div className="grid md:grid-cols-2">
         {hero.images.map((image, index) => (
           <div
-            key={image.src}
+            key={index}
             className={index === 0 ? "media-hero" : "media-hero hidden md:block"}
           >
             <Image
@@ -60,7 +56,7 @@ function Hero() {
         <p className="max-w-md text-base">{hero.body}</p>
         <div className="mt-2 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           {hero.ctas.map((cta) => (
-            <Link key={cta.href} href={cta.href} className="btn btn-inverse">
+            <Link key={cta.label} href={cta.href} className="btn btn-inverse">
               {cta.label}
             </Link>
           ))}
@@ -110,7 +106,7 @@ async function CategoryGrid() {
 }
 
 async function NewArrivals() {
-  const newArrivals = await getProductsBySlugs(NEW_ARRIVALS);
+  const newArrivals = await getProductsBySlugs(await getRailSlugs("new-arrivals"));
 
   return (
     <section aria-labelledby="new-arrivals-title" className="container-page section pt-0">
@@ -166,7 +162,7 @@ function Editorials() {
 }
 
 async function GiftEdit() {
-  const giftEdit = await getProductsBySlugs(GIFT_EDIT);
+  const giftEdit = await getProductsBySlugs(await getRailSlugs("gift-edit"));
 
   return (
     <section aria-labelledby="gift-edit-title" className="container-page section pt-0">

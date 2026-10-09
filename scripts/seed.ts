@@ -1,11 +1,11 @@
 // Loads the placeholder catalogue into the database: `npm run db:seed`.
-// Idempotent; re-running updates existing rows in place by slug.
+// Insert-only: rows that already exist (by slug) are left alone, so re-running
+// never overwrites what admins have edited or live stock levels.
 //
 // Builds its own client because `src/db/index.ts` is `server-only`.
 
 import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
-import { getTableColumns, sql, type Table } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 
 import * as schema from "../src/db/schema";
@@ -20,17 +20,8 @@ if (!process.env.DATABASE_URL) {
 const db = drizzle({ client: neon(process.env.DATABASE_URL), schema });
 const { categories, products, stock } = schema;
 
-// On conflict, take the incoming value for every listed column. `set` is
-// keyed by field name, so unknown keys would be silently dropped.
-function excluded<T extends Table>(table: T, fields: (keyof T["_"]["columns"] & string)[]) {
-  const columns = getTableColumns(table);
-  return Object.fromEntries(
-    fields.map((field) => [field, sql.raw(`excluded."${columns[field].name}"`)]),
-  );
-}
-
 async function main() {
-  const categoryRows = await db
+  const insertedCategories = await db
     .insert(categories)
     .values(
       seedCategories.map((category, position) => ({
@@ -42,15 +33,17 @@ async function main() {
         position,
       })),
     )
-    .onConflictDoUpdate({
-      target: categories.slug,
-      set: excluded(categories, ["name", "href", "imageSrc", "imageAlt", "position"]),
-    })
-    .returning({ id: categories.id, name: categories.name });
+    .onConflictDoNothing({ target: categories.slug })
+    .returning({ id: categories.id });
 
-  const categoryIds = new Map(categoryRows.map((row) => [row.name, row.id]));
+  const categoryIds = new Map(
+    (await db.select({ id: categories.id, name: categories.name }).from(categories)).map((row) => [
+      row.name,
+      row.id,
+    ]),
+  );
 
-  const productRows = await db
+  const insertedProducts = await db
     .insert(products)
     .values(
       seedProducts.map((product) => {
@@ -72,48 +65,28 @@ async function main() {
         };
       }),
     )
-    .onConflictDoUpdate({
-      target: products.slug,
-      set: {
-        ...excluded(products, [
-          "categoryId",
-          "sku",
-          "name",
-          "description",
-          "details",
-          "priceCents",
-          "color",
-          "colorCount",
-          "badge",
-          "gender",
-          "images",
-        ]),
-        updatedAt: sql`now()`,
-      },
-    })
+    .onConflictDoNothing()
     .returning({ id: products.id, slug: products.slug });
 
-  const productIds = new Map(productRows.map((row) => [row.slug, row.id]));
-
-  const stockRows = seedProducts.flatMap((product) =>
-    product.variants.map((variant, position) => ({
-      productId: productIds.get(product.slug)!,
+  // Stock only for products created just now; existing quantities are live data.
+  const productIds = new Map(insertedProducts.map((row) => [row.slug, row.id]));
+  const stockRows = seedProducts.flatMap((product) => {
+    const productId = productIds.get(product.slug);
+    if (!productId) return [];
+    return product.variants.map((variant, position) => ({
+      productId,
       size: variant.size,
       position,
       quantity: variant.stock,
-    })),
-  );
+    }));
+  });
 
-  await db
-    .insert(stock)
-    .values(stockRows)
-    .onConflictDoUpdate({
-      target: [stock.productId, stock.size],
-      set: excluded(stock, ["position", "quantity"]),
-    });
+  if (stockRows.length > 0) {
+    await db.insert(stock).values(stockRows).onConflictDoNothing();
+  }
 
   console.log(
-    `Seeded ${categoryRows.length} categories, ${productRows.length} products, ${stockRows.length} stock rows.`,
+    `Inserted ${insertedCategories.length} categories, ${insertedProducts.length} products, ${stockRows.length} stock rows.`,
   );
 }
 
