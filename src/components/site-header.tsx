@@ -12,6 +12,7 @@ import {
   UserIcon,
 } from "@/components/icons";
 import { navigation } from "@/lib/catalog";
+import { useBag } from "@/lib/shop-store";
 
 const primaryLinks = navigation.filter((item) =>
   ["Women", "Men", "Gifts"].includes(item.label),
@@ -19,6 +20,7 @@ const primaryLinks = navigation.filter((item) =>
 
 export function SiteHeader() {
   const menuRef = useRef<HTMLDialogElement>(null);
+  const { count: bagCount } = useBag();
 
   const openMenu = () => menuRef.current?.showModal();
   const closeMenu = () => menuRef.current?.close();
@@ -79,8 +81,20 @@ export function SiteHeader() {
             >
               <HeartIcon />
             </Link>
-            <Link href="/bag" className="btn-icon relative" aria-label="Bag, 0 items">
+            <Link
+              href="/bag"
+              className="btn-icon relative"
+              aria-label={`Bag, ${bagCount} ${bagCount === 1 ? "item" : "items"}`}
+            >
               <BagIcon />
+              {bagCount > 0 ? (
+                <span
+                  aria-hidden="true"
+                  className="bg-ink text-paper absolute top-1.5 right-1 flex size-4 items-center justify-center rounded-full text-[0.625rem] leading-none tabular-nums"
+                >
+                  {bagCount}
+                </span>
+              ) : null}
             </Link>
           </div>
         </div>
@@ -125,7 +139,16 @@ export function SiteHeader() {
 
         <div className="stack gap-3 px-(--gutter) py-6 hairline-t">
           <Link href="/account" className="text-label link-quiet" onClick={closeMenu}>
-            Sign in
+            My account
+          </Link>
+          <Link href="/wishlist" className="text-label link-quiet" onClick={closeMenu}>
+            Saved items
+          </Link>
+          <Link href="/bag" className="text-label link-quiet" onClick={closeMenu}>
+            Bag{bagCount > 0 ? ` (${bagCount})` : ""}
+          </Link>
+          <Link href="/search" className="text-label link-quiet" onClick={closeMenu}>
+            Search
           </Link>
           <Link href="/appointments" className="text-label link-quiet" onClick={closeMenu}>
             Book an appointment

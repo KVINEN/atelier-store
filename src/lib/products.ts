@@ -5,6 +5,8 @@ import type { ImageAsset } from "@/lib/images";
 
 export type Variant = { size: string; stock: number };
 
+export type Gender = "women" | "men" | "unisex";
+
 export type ProductCategory = { slug: string; name: string; href: string };
 
 export type Product = {
@@ -17,6 +19,7 @@ export type Product = {
   color: string;
   colors: number;
   badge?: "New" | "Exclusive" | "Limited";
+  gender: Gender;
   description: string;
   details: string[];
   /** One entry per size; one-size items have a single "One size" variant. */
@@ -25,10 +28,31 @@ export type Product = {
   images: ImageAsset[];
 };
 
+/** What the bag and saved items keep about a product. */
+export type ProductSnapshot = {
+  slug: string;
+  name: string;
+  price: number;
+  color: string;
+  image: ImageAsset;
+};
+
+export function toSnapshot(product: Product): ProductSnapshot {
+  return {
+    slug: product.slug,
+    name: product.name,
+    price: product.price,
+    color: product.color,
+    image: product.images[0],
+  };
+}
+
 export type StockState = "in-stock" | "low-stock" | "sold-out";
 
 export const LOW_STOCK_THRESHOLD = 3;
 export const ONE_SIZE = "One size";
+/** Per bag line. */
+export const MAX_QUANTITY = 10;
 
 export function stockState(quantity: number): StockState {
   if (quantity <= 0) return "sold-out";

@@ -67,6 +67,7 @@ async function main() {
           color: product.color,
           colorCount: product.colors,
           badge: product.badge ?? null,
+          gender: product.gender,
           images: product.images,
         };
       }),
@@ -84,6 +85,7 @@ async function main() {
           "color",
           "colorCount",
           "badge",
+          "gender",
           "images",
         ]),
         updatedAt: sql`now()`,

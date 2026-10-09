@@ -6,6 +6,7 @@ import { StockStatus } from "@/components/stock-status";
 import {
   formatPrice,
   stockState,
+  toSnapshot,
   totalStock,
   type Product,
 } from "@/lib/products";
@@ -46,7 +47,7 @@ export function ProductCard({
           </span>
         ) : null}
         <div className="absolute top-1 right-1">
-          <SaveButton productName={product.name} />
+          <SaveButton item={toSnapshot(product)} />
         </div>
       </div>
 

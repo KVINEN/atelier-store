@@ -15,6 +15,7 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  emailAndPassword: { enabled: true },
   // nextCookies must be the last plugin in the array
   plugins: [nextCookies()],
 });

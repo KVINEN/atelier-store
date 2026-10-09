@@ -24,9 +24,9 @@ export const navigation = [
   { label: "New In", href: "/new-in" },
   { label: "Women", href: "/women" },
   { label: "Men", href: "/men" },
-  { label: "Handbags", href: "/handbags" },
-  { label: "Shoes", href: "/shoes" },
-  { label: "Jewellery", href: "/jewellery" },
+  { label: "Handbags", href: "/categories/handbags" },
+  { label: "Shoes", href: "/categories/shoes" },
+  { label: "Jewellery", href: "/categories/jewellery" },
   { label: "Gifts", href: "/gifts" },
 ] as const;
 
@@ -76,7 +76,7 @@ export const editorials: EditorialStory[] = [
     eyebrow: "The Outerwear Edit",
     title: "Coats with a point of view",
     body: "Double-faced wool, sculpted shoulders and deep colour. Pieces cut to be worn for decades, not seasons.",
-    cta: { label: "Discover outerwear", href: "/women/outerwear" },
+    cta: { label: "Discover outerwear", href: "/women" },
     image: {
       src: unsplash("1483985988355-763728e1935b", 1600),
       alt: "Woman in a burgundy wool coat and red sunglasses carrying shopping bags",
@@ -86,7 +86,7 @@ export const editorials: EditorialStory[] = [
     eyebrow: "Tailoring",
     title: "The new suit, softened",
     body: "Unstructured jackets and fluid trousers in fine Italian wool, made to move through the city.",
-    cta: { label: "Shop tailoring", href: "/men/tailoring" },
+    cta: { label: "Shop tailoring", href: "/men" },
     image: {
       src: unsplash("1617137968427-85924c800a22", 1600),
       alt: "Man in a navy suit and white shirt walking past a glass storefront",

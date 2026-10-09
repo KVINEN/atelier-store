@@ -6,19 +6,25 @@ import { useState } from "react";
 import { HeartIcon } from "@/components/icons";
 import { StockStatus } from "@/components/stock-status";
 import type { Variant } from "@/lib/products";
+import {
+  addToBag as addLineToBag,
+  toggleSaved,
+  useIsSaved,
+  type ProductSnapshot,
+} from "@/lib/shop-store";
 
 type ProductPurchaseProps = {
-  name: string;
+  item: ProductSnapshot;
   color: string;
   colors: number;
   variants: Variant[];
   oneSize: boolean;
 };
 
-// Size selection, stock state and bag/save actions. There's no cart backend
-// yet, so "Add to bag" only confirms the selection.
+// Size selection, stock state and bag/save actions. The bag and saved items
+// live in the browser (see `@/lib/shop-store`) until there's a cart backend.
 export function ProductPurchase({
-  name,
+  item,
   color,
   colors,
   variants,
@@ -27,7 +33,7 @@ export function ProductPurchase({
   const [size, setSize] = useState<string | null>(oneSize ? variants[0].size : null);
   const [error, setError] = useState(false);
   const [added, setAdded] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const saved = useIsSaved(item.slug);
 
   const total = variants.reduce((sum, variant) => sum + variant.stock, 0);
   const selected = variants.find((variant) => variant.size === size);
@@ -38,6 +44,7 @@ export function ProductPurchase({
       setError(true);
       return;
     }
+    addLineToBag(item, selected.size);
     setAdded(true);
   }
 
@@ -128,16 +135,22 @@ export function ProductPurchase({
           type="button"
           className="btn btn-secondary btn-block"
           aria-pressed={saved}
-          onClick={() => setSaved((value) => !value)}
+          onClick={() => toggleSaved(item)}
         >
           <HeartIcon width={16} height={16} fill={saved ? "currentColor" : "none"} />
           {saved ? "Saved" : "Save"}
         </button>
 
         <p role="status" className="text-sm empty:hidden">
-          {added && selected
-            ? `${name}${oneSize ? "" : `, size ${selected.size},`} added to your bag.`
-            : ""}
+          {added && selected ? (
+            <>
+              {item.name}
+              {oneSize ? "" : `, size ${selected.size},`} added to your bag.{" "}
+              <Link href="/bag" className="link">
+                View bag
+              </Link>
+            </>
+          ) : null}
         </p>
       </div>
     </div>

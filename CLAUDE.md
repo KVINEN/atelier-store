@@ -22,7 +22,7 @@ npm run db:seed        # upsert the placeholder catalogue (src/db/seed-data.ts)
 
 There is no test runner configured yet.
 
-Env: copy `.env.example` to `.env.local` (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`). `drizzle.config.ts` loads `.env.local` then `.env` via dotenv; the app reads them through Next.
+Env: copy `.env.example` to `.env.local` (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`). Locally, `npm run stripe:listen` forwards the handled Checkout events to the webhook and prints its signing secret (Stripe CLI 1.53+ requires `--events`). `drizzle.config.ts` loads `.env.local` then `.env` via dotenv; the app reads them through Next.
 
 ## Stack
 
@@ -42,9 +42,10 @@ authClient (src/lib/auth-client.ts, baseURL = NEXT_PUBLIC_APP_URL)
 
 - **Server-only boundary**: `src/lib/env.ts`, `src/lib/auth.ts` and `src/db/index.ts` import `server-only`; client components must only use `src/lib/auth-client.ts`.
 - **Env access**: server code reads required vars via `env` from `src/lib/env.ts` (lazy getters that throw when missing), not `process.env` directly. `src/db/index.ts` reads `DATABASE_URL` at module load, which is why builds need it.
-- **Schema**: `src/db/schema/` (re-exported from `index.ts`) is shared by the db client, the Better Auth adapter, and drizzle-kit. Better Auth tables are generated into `schema/auth.ts` with `auth:generate` (re-export it from `index.ts`). No auth tables exist yet, so auth endpoints will fail until that's done.
-- **Better Auth plugins**: `nextCookies()` must remain the last entry in `plugins`. No sign-in methods (`emailAndPassword`, `socialProviders`) are enabled yet.
+- **Schema**: `src/db/schema/` (re-exported from `index.ts`) is shared by the db client, the Better Auth adapter, and drizzle-kit. Better Auth tables are generated into `schema/auth.ts` with `auth:generate` and re-exported from `index.ts`.
+- **Better Auth plugins**: `nextCookies()` must remain the last entry in `plugins`. `emailAndPassword` is enabled; no `socialProviders` yet.
 - **Rendering model**: `next.config.ts` enables `cacheComponents` and `partialPrefetching`. Data fetching is dynamic by default; opt into caching with the `"use cache"` directive / `cacheLife` / `cacheTag`. Requires the Node.js runtime (no `runtime = 'edge'`). Read `node_modules/next/dist/docs/` before using caching or routing APIs.
+- **Payments**: Stripe Checkout Sessions with `ui_mode: "elements"` (Payment Element on our own `/checkout` page, styled via the Appearance API in `src/components/checkout-view.tsx`). The server action in `src/app/checkout/actions.ts` prices the bag from the database (the localStorage bag is only a display snapshot) and inserts a `pending` order. Only the webhook (`src/app/api/stripe/webhook/route.ts`) marks orders paid and decrements stock; `/checkout/complete` just displays the outcome. Never pass `payment_method_types`.
 - **Tailwind v4** is wired through the `@tailwindcss/turbopack` loader rule in `next.config.ts` (no PostCSS config). Theme tokens live in `src/app/globals.css` under `@theme inline`.
 
 ## Database conventions

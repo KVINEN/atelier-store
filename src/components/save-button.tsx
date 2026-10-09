@@ -1,19 +1,18 @@
 "use client";
 
-import { useState } from "react";
-
 import { HeartIcon } from "@/components/icons";
+import { toggleSaved, useIsSaved, type ProductSnapshot } from "@/lib/shop-store";
 
-export function SaveButton({ productName }: { productName: string }) {
-  const [saved, setSaved] = useState(false);
+export function SaveButton({ item }: { item: ProductSnapshot }) {
+  const saved = useIsSaved(item.slug);
 
   return (
     <button
       type="button"
       className="btn-icon"
-      aria-label={`Save ${productName}`}
+      aria-label={`Save ${item.name}`}
       aria-pressed={saved}
-      onClick={() => setSaved((value) => !value)}
+      onClick={() => toggleSaved(item)}
     >
       <HeartIcon fill={saved ? "currentColor" : "none"} />
     </button>

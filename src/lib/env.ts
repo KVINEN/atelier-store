@@ -18,4 +18,15 @@ export const env = {
   get BETTER_AUTH_URL() {
     return required("BETTER_AUTH_URL");
   },
+  /** Public origin, used for Stripe return URLs. */
+  get APP_URL() {
+    return required("NEXT_PUBLIC_APP_URL");
+  },
+  /** Prefer a restricted key (rk_) with Checkout Sessions write access. */
+  get STRIPE_SECRET_KEY() {
+    return required("STRIPE_SECRET_KEY");
+  },
+  get STRIPE_WEBHOOK_SECRET() {
+    return required("STRIPE_WEBHOOK_SECRET");
+  },
 };
