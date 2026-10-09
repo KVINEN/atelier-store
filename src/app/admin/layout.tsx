@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { AdminNav } from "@/components/admin/admin-nav";
 import { SignOutButton } from "@/components/admin/sign-out-button";
-import { adminMetadata, requireAdmin } from "@/lib/admin";
+import { adminMetadata, requireAdminPage } from "@/lib/admin";
 
 export const generateMetadata = () =>
   adminMetadata({
@@ -11,7 +12,7 @@ export const generateMetadata = () =>
   });
 
 // No admin markup sits outside the Suspense boundary, so the static shell is
-// empty for everyone. Pages must still call requireAdmin() themselves.
+// empty for everyone. Pages must still call requireAdminPage() themselves.
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <Suspense fallback={null}>
@@ -21,7 +22,7 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
 }
 
 async function AdminShell({ children }: { children: React.ReactNode }) {
-  const admin = await requireAdmin();
+  const admin = await requireAdminPage();
 
   return (
     <>
@@ -40,6 +41,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
+      <AdminNav />
       {children}
     </>
   );

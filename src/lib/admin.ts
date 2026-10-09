@@ -3,6 +3,7 @@ import "server-only";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { cache } from "react";
 
 import { auth } from "@/lib/auth";
@@ -27,11 +28,23 @@ export const requireAdmin = cache(async (): Promise<AdminUser> => {
 });
 
 /**
+ * requireAdmin() for rendering (layouts, pages, metadata). Awaiting
+ * connection() first keeps the session read out of prerenders and prefetches
+ * (including the runtime prerender on a page load), which would otherwise
+ * start the uncached session query and abandon it mid-flight. The check runs
+ * for the real request; prerenders get the Suspense fallback.
+ */
+export async function requireAdminPage(): Promise<AdminUser> {
+  await connection();
+  return requireAdmin();
+}
+
+/**
  * Admin metadata must be gated too: a static `metadata` export is baked into
  * the prerendered shell that any signed-in visitor receives. Use as
  * `export const generateMetadata = () => adminMetadata({ title: "…" })`.
  */
 export async function adminMetadata(metadata: Metadata): Promise<Metadata> {
-  await requireAdmin();
+  await requireAdminPage();
   return metadata;
 }

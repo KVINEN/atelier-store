@@ -76,7 +76,7 @@ export async function markOrderPaid(
     -- Data-modifying CTEs always run to completion, even when unreferenced.
     logged as (
       insert into stock_movements (product_id, size, delta, quantity_after, reason, order_id)
-      select product_id, size, -sold, after, 'sale', (select id from paid) from sold
+      select product_id, size, -sold, after, 'sale'::stock_movement_reason, (select id from paid) from sold
     )
     select id from paid
   `);

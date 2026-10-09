@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // it is not the security boundary — requireAdmin() in src/lib/admin.ts is.
 export function proxy(request: NextRequest) {
   if (!getSessionCookie(request)) {
-    return NextResponse.rewrite(new URL("/_not-found", request.url));
+    return NextResponse.rewrite(new URL("/_not-found", request.url), { status: 404 });
   }
   return NextResponse.next();
 }
